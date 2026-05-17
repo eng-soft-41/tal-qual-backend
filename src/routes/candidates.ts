@@ -1,6 +1,6 @@
-import { FastifyInstance } from 'fastify';
+import fastify, { FastifyInstance } from 'fastify';
 import { Candidate } from '../types/candidate';
-import { connectDB, getDB } from '../config/database';
+import {  getDB } from '../config/database';
 
 export async function candidateRoutes(fastify: FastifyInstance) {
 
@@ -34,4 +34,54 @@ export async function candidateRoutes(fastify: FastifyInstance) {
     return { data: candidates };
   });
 
+  fastify.get<{
+    Reply: {
+      data: Array<{
+        _id: string;
+        total: number;
+        afters: Array<{ value: string; count: number }>;
+      }>;
+    };
+  }>('/candidates/stats/by-connector', async (request: Request, reply) => {
+    const db = getDB();
+    const collection = db.collection<Candidate>('candidates');
+  
+    const stats = await collection
+      .aggregate([
+        {
+          $group: {
+            _id: '$connector_family',
+            total: { $sum: 1 },
+            afters: { $push: '$context.after' }
+          }
+        },
+        {
+          $unwind: '$afters'
+        },
+        {
+          $group: {
+            _id: { connector: '$_id', after: '$afters' },
+            count: { $sum: 1 }
+          }
+        },
+        {
+          $group: {
+            _id: '$_id.connector',
+            total: { $first: '$total' },
+            afters: {
+              $push: {
+                value: '$_id.after',
+                count: '$count'
+              }
+            }
+          }
+        },
+        {
+          $sort: { total: -1 }
+        }
+      ])
+      .toArray();
+  
+    return { data: stats };
+  });
 }
