@@ -3,6 +3,7 @@ import fastify from 'fastify';
 import { ZodError } from 'zod';
 import { connectDB, client } from './config/database';
 import { candidateRoutes } from './routes/candidates';
+import { comparisonRoutes } from './routes/comparisons';
 import { env } from './config/env';
 
 export const app = fastify({ logger: true });
@@ -25,6 +26,7 @@ async function start() {
     await connectDB();
 
     await app.register(candidateRoutes);
+    await app.register(comparisonRoutes);
 
     const address = await app.listen({ port: env.PORT, host: '0.0.0.0' });
     console.log(`🚀 Server listening on ${address}`);

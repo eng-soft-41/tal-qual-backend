@@ -4,6 +4,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node src/server.ts",
+    "import:comparisons": "ts-node src/scripts/importComparisons.ts",
     "build": "tsc",
     "start": "node dist/server.js"
   },
