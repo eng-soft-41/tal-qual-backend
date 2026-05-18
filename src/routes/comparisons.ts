@@ -33,7 +33,11 @@ const examplesQuerySchema = comparisonQuerySchema.extend({
   ground: comparisonQuerySchema.shape.dataset_version,
   vehicle: comparisonQuerySchema.shape.dataset_version,
   quality_label: comparisonQuerySchema.shape.dataset_version,
-  visualization_ready: comparisonBooleanQuery.optional(),
+  visualization_ready: comparisonBooleanQuery.optional().default(true),
+});
+
+const candidateQuerySchema = comparisonQuerySchema.pick({
+  dataset_version: true,
 });
 
 async function resolveDatasetVersion(requested?: string) {
@@ -87,6 +91,10 @@ export async function comparisonRoutes(fastify: FastifyInstance) {
       .collection(comparisonCollections.manifests)
       .findOne({ dataset_version: datasetVersion });
 
+    if (!manifest) {
+      return { data: null };
+    }
+
     return { data: manifest };
   });
 
@@ -111,7 +119,7 @@ export async function comparisonRoutes(fastify: FastifyInstance) {
       filter,
       query.limit,
       query.offset,
-      { count: -1 },
+      { count: -1, ground_lemma: 1, vehicle_head_clean_lemma: 1 },
       datasetVersion,
     );
   });
@@ -125,7 +133,7 @@ export async function comparisonRoutes(fastify: FastifyInstance) {
       { dataset_version: datasetVersion },
       query.limit,
       query.offset,
-      { count: -1 },
+      { count: -1, ground_lemma: 1 },
       datasetVersion,
     );
   });
@@ -139,7 +147,7 @@ export async function comparisonRoutes(fastify: FastifyInstance) {
       { dataset_version: datasetVersion },
       query.limit,
       query.offset,
-      { count: -1 },
+      { count: -1, vehicle_head_clean_lemma: 1 },
       datasetVersion,
     );
   });
@@ -163,9 +171,7 @@ export async function comparisonRoutes(fastify: FastifyInstance) {
       filter.quality_label = query.quality_label;
     }
 
-    if (query.visualization_ready !== undefined) {
-      filter.visualization_ready = query.visualization_ready;
-    }
+    filter.visualization_ready = query.visualization_ready;
 
     return listCollection(
       comparisonCollections.examples,
@@ -180,11 +186,8 @@ export async function comparisonRoutes(fastify: FastifyInstance) {
   fastify.get<{
     Params: { candidateId: string };
   }>('/comparisons/candidates/:candidateId', async (request, reply) => {
-    const datasetVersion = await resolveDatasetVersion(
-      typeof request.query === 'object' && request.query
-        ? (request.query as { dataset_version?: string }).dataset_version
-        : undefined,
-    );
+    const query = candidateQuerySchema.parse(request.query);
+    const datasetVersion = await resolveDatasetVersion(query.dataset_version);
     const db = getDB();
     const candidate = await db.collection<ComparisonCandidate>(comparisonCollections.candidates).findOne({
       dataset_version: datasetVersion,
