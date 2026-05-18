@@ -59,8 +59,10 @@ DATABASE=tal_qual
 From this backend project root:
 
 ```bash
-npm run import:comparisons -- ../tal-qual/data/export/backend/comparisons/v1
+npm run import:comparisons -- ../tal-qual-comparisons-output/data/export/backend/comparisons/v1
 ```
+
+> Repo: https://github.com/eng-soft-41/tal-qual-comparisons-output
 
 Expected import summary values:
 
