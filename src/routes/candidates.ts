@@ -1,6 +1,12 @@
-import fastify, { FastifyInstance } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import { Candidate } from '../types/candidate';
 import {  getDB } from '../config/database';
+
+type CandidateConnectorStats = {
+  _id: string;
+  total: number;
+  afters: Array<{ value: string; count: number }>;
+};
 
 export async function candidateRoutes(fastify: FastifyInstance) {
 
@@ -42,32 +48,22 @@ export async function candidateRoutes(fastify: FastifyInstance) {
         afters: Array<{ value: string; count: number }>;
       }>;
     };
-  }>('/candidates/stats/by-connector', async (request: Request, reply) => {
+  }>('/candidates/stats/by-connector', async () => {
     const db = getDB();
     const collection = db.collection<Candidate>('candidates');
   
     const stats = await collection
-      .aggregate([
+      .aggregate<CandidateConnectorStats>([
         {
           $group: {
-            _id: '$connector_family',
-            total: { $sum: 1 },
-            afters: { $push: '$context.after' }
-          }
-        },
-        {
-          $unwind: '$afters'
-        },
-        {
-          $group: {
-            _id: { connector: '$_id', after: '$afters' },
+            _id: { connector: '$connector_family', after: '$context.after' },
             count: { $sum: 1 }
           }
         },
         {
           $group: {
             _id: '$_id.connector',
-            total: { $first: '$total' },
+            total: { $sum: '$count' },
             afters: {
               $push: {
                 value: '$_id.after',
